@@ -1,5 +1,6 @@
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from .models import Car
+from django.core.exceptions import ObjectDoesNotExist
 import json
 
 def index(request:HttpRequest) -> JsonResponse:
@@ -38,93 +39,115 @@ def get_num(request:HttpRequest) -> JsonResponse:
 def get_user(request:HttpRequest, username:str) -> JsonResponse:
     return JsonResponse({'username':username})
 
-def cars_all(request:HttpRequest) -> JsonResponse:
-    cars_all = Car.objects.all()
 
-    results = []
-    for car in cars_all:
-        results.append({
+def to_dict(car: Car) -> dict:
+
+    return{
             "id":car.pk,
             "name":car.name,
+            "url":car.url,
+            "description":car.description,
             "price":car.price,
             "color":car.color,
             "model":car.model,
             "years":car.years,
-            "motors":car.motors
-        })
-    return JsonResponse({"result":results})
+            "motors":car.motors,
 
-def add_car(request:HttpRequest) -> JsonResponse:
-    if request.method == 'POST':
-        data = request.body.decode()
-        data_json = json.loads(data)
+            "creates_at":car.created_at,
+            "updated_at":car.updated_at
+        }
 
-        car = Car(
-            name = data_json['name'],
-            price = data_json['price'],
-            color = data_json['color'],
-            model = data_json['model'],
-            years = data_json['years'],
-            motors = data_json['motors']
-        )
-        car.save()
-        return JsonResponse({'result':200})
-    
-def car_id(request:HttpRequest,id) -> JsonResponse:
-    cars = Car.objects.all()
 
-    for car in cars:
-        if car.id == id:
-            result = ({
-                "id":car.pk,
-                "name":car.name,
-                "price":car.price,
-                "color":car.color,
-                "model":car.model,
-                "years":car.years,
-                "motors":car.motors
-            })
-    return JsonResponse({'result':result})
+def car(request:HttpRequest,id = None) -> JsonResponse:
 
-def car_del(request: HttpRequest,id) -> JsonResponse:
-    cars = Car.objects.all()
-
-    for car in cars:
-        if car.id == id:
-            car.delete()
-
-            return JsonResponse({'result':200})
-
-    return JsonResponse({'result':'not found'})
-
-def car_upd(request:HttpRequest, id) -> JsonResponse:
-    if request.method == 'POST':
-        data = request.body.decode()
-        data_json = json.loads(data)
-
-        cars = Car.objects.all()
-        for car in cars:
-            if car.id == id:
-                car.name = data_json.get('name',car.name)
-                car.price = data_json.get('price',car.price)
-                car.color = data_json.get('color',car.color)
-                car.model = data_json.get('model',car.model)
-                car.years = data_json.get('years',car.years)
-                car.motors = data_json.get('motors',car.years)
-
-                car.save()
-
-                result = ({
-                    "id":car.pk,
-                    "name":car.name,
-                    "price":car.price,
-                    "color":car.color,
-                    "model":car.model,
-                    "years":car.years,
-                    "motors":car.motors
-                })
-    
+    if request.method == "GET":
+        if id is not None:
+            try:
+                car = Car.objects.get(id = id)
+                return JsonResponse(to_dict(car))
+            except ObjectDoesNotExist:
+                return JsonResponse({'result':'object does not exist!'})
             
-                return JsonResponse({'result':result})
-        return JsonResponse({'result':'not found'})
+        else:
+            cars_all = Car.objects.all()
+            result = [to_dict(car) for car in cars_all]
+            return JsonResponse({'result':result})
+        
+    elif request.method == 'POST':
+        data_json = request.body.decode()
+        data = json.loads(data_json)
+
+        if not data.get('name'):
+            return JsonResponse({'status': 'name is required!'})
+        elif not data.get('url'):
+            return JsonResponse({'status': 'url is required!'})
+        elif not data['url'].startswith('https://'):
+            return JsonResponse({'status': 'url is invalid!'})
+        elif not data.get('price'):
+            return JsonResponse({'status': 'price is required!'})
+        elif not data.get('color'):
+            return JsonResponse({'status': 'color is required!'})
+        elif not data.get('model'):
+            return JsonResponse({'status': 'model is required!'})
+        elif not data.get('years'):
+            return JsonResponse({'status': 'years is required!'})
+        elif not data.get('motors'):
+            return JsonResponse({'status': 'motors is required!'})
+        
+        car = Car.objects.create(
+            name = data['name'],
+            url  = data['url'],
+            description = data.get('description',''),
+            price = data['price'],
+            color = data['color'],
+            model = data['model'],
+            years = data['years'],
+            motors = data['motors']
+        )
+
+        car.save()
+
+        return JsonResponse(to_dict(car))
+    
+    elif request.method == 'PUT':
+        try:
+            car = Car.objects.get(id = id)
+        except ObjectDoesNotExist:
+            return JsonResponse({'status': 'object does not exist!'})
+        
+        data_json = request.body.decode()
+        data = json.loads(data_json)
+
+        if data.get('name'):
+            car.name = data['name']
+        if data.get('url'):
+            car.url = data['url']
+        if data.get('description'):
+            car.description = data['description']
+        if data.get('price'):
+            car.price = data['price']
+        if data.get('color'):
+            car.color = data['color']
+        if data.get('model'):
+            car.model = data['model']
+        if data.get('years'):
+            car.years = data['years']
+        if data.get('motors'):
+            car.motors = data['motors']
+
+        car.save()
+
+        return JsonResponse(to_dict(car=car))
+    
+    elif request.method == 'DELETE':
+        try:
+            car = Car.objects.get(id = id)
+
+        except ObjectDoesNotExist:
+            return JsonResponse({'status': 'object does not exist!'})
+        
+        car.delete()
+
+        return JsonResponse({'status':'ok'})
+    return JsonResponse({'status': 'method not allowed!'})
         
