@@ -2,6 +2,8 @@ from django.db import models
 
 class Car(models.Model):
     name = models.CharField(max_length=80)
+    url = models.URLField(unique=True)
+    description = models.TextField(default="",blank=True)
     price = models.FloatField()
     color = models.CharField(max_length=80)
     model = models.CharField(max_length=80)
