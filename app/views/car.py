@@ -38,8 +38,9 @@ class CarView(View):
             if name is not None:
                 car = Car.objects.filter(name = name)
             else:
-                result = [to_dict(car) for car in cars_all]
-                return JsonResponse({'result':result})
+                cars_all = Car.objects.all()
+            result = [to_dict(car) for car in cars_all]
+            return JsonResponse({'result':result})
         
     def post(self, request:HttpRequest) -> JsonResponse:
         data_json = request.body.decode()
