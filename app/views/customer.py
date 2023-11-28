@@ -30,15 +30,14 @@ class CustomerView(View):
                 return JsonResponse({'result':'object does not exist!'})
             
         else:
-            customers_all = Customer.objects.all()
-
             query_params = request.GET
             age = query_params.get('age')
             if age is not None:
-                customer = Customer.objects.filter(age = age)
+                customers_all = Customer.objects.filter(age = age)
             else:
-                result = [to_dict(customer) for customer in customers_all]
-                return JsonResponse({'result':result})
+                customers_all = Customer.objects.all()
+            result = [to_dict(customer) for customer in customers_all]
+            return JsonResponse({'result':result})
     
     def post(self, request:HttpRequest) -> JsonResponse:
         data_json = request.body.decode()
